@@ -22,6 +22,7 @@ type UserInput struct {
 
 var (
 	bgPath = "./data/data.data"
+	flagChan chan bool
 )
 
 func NewRedis() *UserInput {
@@ -82,23 +83,25 @@ func (this *UserInput) transUserInputCommand(commandList []string) {
 	case "SAVE":
 		fallthrough
 	case "BGSAVE":
-		go func() {
-			fmt.Println("备份")
-			backupData := make(map[string]string, 10)
-			this.Data.Range(func(key, value interface{}) bool {
-				backupData[key.(string)] = value.(string)
-				return true
-			})
-			backUpString, err := json.Marshal(backupData)
-			if err !=nil {
-				log.Fatalf("failed: %v", err)
-			}
-
-			ioutil.WriteFile(bgPath, []byte(backUpString),  0777)
-		}()
+		go this.backUp()
 	default:
 		fmt.Println("unknow command")
 	}
 
 	this.Command = command
+}
+
+func (this *UserInput)backUp() {
+	fmt.Println("备份")
+	backupData := make(map[string]string, 10)
+	this.Data.Range(func(key, value interface{}) bool {
+		backupData[key.(string)] = value.(string)
+		return true
+	})
+	backUpString, err := json.Marshal(backupData)
+	if err !=nil {
+		log.Fatalf("failed: %v", err)
+	}
+
+	ioutil.WriteFile(bgPath, []byte(backUpString),  0777)
 }
